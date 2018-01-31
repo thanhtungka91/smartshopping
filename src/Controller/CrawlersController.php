@@ -59,9 +59,12 @@ class CrawlersController extends AppController
         $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
             $client = new Client();
             $crawler = $client->click($node->link());
-            // check if valid get link 
-            print_r($client->getHistory()->current()->getUri());  //da lay duoc url 
-            die(); 
+            $checkMerchanInfo = $crawler->filter('#merchant-info')->text();
+            if(strpos($checkMerchanInfo,"発送します。")){
+                // extract data and save to db here 
+                $urlLink = $client->getHistory()->current()->getUri();  //da lay duoc url 
+            }
+            
         }); 
    
 
