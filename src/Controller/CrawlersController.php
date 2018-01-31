@@ -18,6 +18,9 @@ use Cake\Core\Configure;
 use Cake\Network\Exception\ForbiddenException;
 use Cake\Network\Exception\NotFoundException;
 use Cake\View\Exception\MissingTemplateException;
+use Goutte\Client;
+use GuzzleHttp\Client as GuzzleClient;
+
 
 /**
  * Static content controller
@@ -40,6 +43,28 @@ class CrawlersController extends AppController
      */
     public function index()
     {
+        $client = new Client();
+        $guzzleClient = new GuzzleClient(array(
+            'timeout' => 60,
+            'defaults' => ['verify' => false],
+        ));
+
+        $client->setClient($guzzleClient);
+ 
+        $crawler = $client->request('GET', 'https://www.amazon.co.jp');
+
+        $form = $crawler->selectButton('検索')->form();
+        $crawler = $client->submit($form, array('field-keywords' => '8006643000928'));
+
+        $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
+            $client = new Client();
+            $crawler = $client->click($node->link());
+            // check if valid get link 
+            print_r($client->getHistory()->current()->getUri());  //da lay duoc url 
+            die(); 
+        }); 
+   
+
         try {
             $this->render();
         } catch (MissingTemplateException $exception) {
