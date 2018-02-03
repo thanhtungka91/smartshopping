@@ -1,31 +1,16 @@
-# CakePHP Application Skeleton
+# SmartShopping Application 
 
-[![Build Status](https://img.shields.io/travis/cakephp/app/master.svg?style=flat-square)](https://travis-ci.org/cakephp/app)
-[![License](https://img.shields.io/packagist/l/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
-
-A skeleton for creating applications with [CakePHP](https://cakephp.org) 3.x.
-
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
 
 ## Installation
 
-1. Download [Composer](https://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project --prefer-dist cakephp/app [app_name]`.
-
-If Composer is installed globally, run
-
-```bash
-composer create-project --prefer-dist cakephp/app
+1. Clone app 
+```git clone 
+```
+2. Run app 
+```composer install 
 ```
 
-In case you want to use a custom app dir name (e.g. `/myapp/`):
-
-```bash
-composer create-project --prefer-dist cakephp/app myapp
-```
-
-You can now either use your machine's webserver to view the default home page, or start
-up the built-in webserver with:
+3. Start App 
 
 ```bash
 bin/cake server -p 8765
@@ -33,19 +18,35 @@ bin/cake server -p 8765
 
 Then visit `http://localhost:8765` to see the welcome page.
 
-## Update
-
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
-
 ## Configuration
-
+1. Configue database 
 Read and edit `config/app.php` and setup the `'Datasources'` and any other
 configuration relevant for your application.
 
-## Layout
+2. Create Database 
+a. Create database, please note that need to set utf8 which is used for saving japanese charater latter. 
+```
+CREATE DATABASE smartshopping
+  DEFAULT CHARACTER SET utf8
+  DEFAULT COLLATE utf8_general_ci;
+```
+b. Create products table
+```
+CREATE TABLE `smartshopping`.`products` (
+  `product_id` INT NOT NULL AUTO_INCREMENT,
+  `product_name` VARCHAR(45) NULL,
+  `product_jan` VARCHAR(45) NULL,
+  `product_asin` VARCHAR(45) NULL,
+  `product_amz_url` VARCHAR(255) NULL,
+  PRIMARY KEY (`product_id`));
+```
 
-The app skeleton uses a subset of [Foundation](http://foundation.zurb.com/) (v5) CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.
+## How to use the application 
+1. Copy file jan to smartshopping directory 
+example file 
+```
+4904740511511
+4973512257896
+```
+2. Run crawler 
+http://localhost:8765/crawler
