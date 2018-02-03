@@ -4,10 +4,12 @@ It is simple application for crawler products from amz with jan number
 ## Installation
 
 1. Clone app 
-```git colone https://github.com/thanhtungka91/smartshopping.git
+```
+git colone https://github.com/thanhtungka91/smartshopping.git
 ```
 2. Run app 
-```composer install 
+```
+composer install 
 ```
 
 3. Start App 
