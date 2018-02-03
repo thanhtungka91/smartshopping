@@ -18,9 +18,12 @@ use Cake\Core\Configure;
 use Cake\Network\Exception\ForbiddenException;
 use Cake\Network\Exception\NotFoundException;
 use Cake\View\Exception\MissingTemplateException;
+use Cake\ORM\TableRegistry;
+use Cake\Datasource\ConnectionManager;
 use Goutte\Client;
 use GuzzleHttp\Client as GuzzleClient;
-
+use GuzzleHttp\RequestOptions; 
+use Symfony\Component\BrowserKit\Cookie;
 
 /**
  * Static content controller
@@ -41,32 +44,63 @@ class CrawlersController extends AppController
      * @throws \Cake\Network\Exception\NotFoundException When the view file could not
      *   be found or \Cake\View\Exception\MissingTemplateException in debug mode.
      */
-    public function index()
-    {
-        $client = new Client();
+
+
+    public function index(){
+        $this->client = new Client();
+        $cookieJar = new \GuzzleHttp\Cookie\CookieJar(true);
+        $cookieJar->setCookie(new \GuzzleHttp\Cookie\SetCookie([
+            'Domain'  => "www.amazon.co.jp",
+            'Name'    => "smartshopping",
+            'Value'   => "smartshopping",
+            'Discard' => true
+        ]));
+        
         $guzzleClient = new GuzzleClient(array(
             'timeout' => 60,
             'defaults' => ['verify' => false],
+            'cookies' => $cookieJar
         ));
-
-        $client->setClient($guzzleClient);
+        $this->client->setClient($guzzleClient);
+        $this->client->setHeader('User-Agent', "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.101 Safari/537.36");
  
-        $crawler = $client->request('GET', 'https://www.amazon.co.jp');
-
+        $crawler = $this->client->request('GET', 'https://www.amazon.co.jp');
         $form = $crawler->selectButton('検索')->form();
-        $crawler = $client->submit($form, array('field-keywords' => '8006643000928'));
 
-        $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
-            $client = new Client();
-            $crawler = $client->click($node->link());
-            $checkMerchanInfo = $crawler->filter('#merchant-info')->text();
-            if(strpos($checkMerchanInfo,"発送します。")){
-                // extract data and save to db here 
-                $urlLink = $client->getHistory()->current()->getUri();  //da lay duoc url 
-            }
-            
-        }); 
-   
+        $jansArray = $this->readJanCode();
+        $newArray = array();
+
+        foreach($jansArray as $jan){
+            $this->jancode = $jan;
+            $crawler = $this->client->submit($form, array('field-keywords' => $jan));
+            $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
+                $crawler = $this->client->click($node->link());
+                $checkMerchanInfo = $crawler->filter('#merchant-info')->text();
+                if(strpos($checkMerchanInfo,"発送します。")){
+                    // extract data and save to db 
+                    $urlLink = $this->client->getHistory()->current()->getUri(); 
+                    $firstNaemPosition = strpos($urlLink, 'jp');  
+                    $lastNamePosition = strpos($urlLink,'/dp');   
+                    $itemNameEncode = substr($urlLink , $firstNaemPosition+3, $lastNamePosition-$firstNaemPosition-3);
+                    $itemNameDecode = urldecode($itemNameEncode);
+                
+                    $asin = substr($urlLink , $lastNamePosition+4,10);
+
+                    //insert to db 
+                    $products_table = TableRegistry::get('products');
+                    $products = $products_table->newEntity();
+                    $products->product_jan = $this->jancode; 
+                    $products->product_asin = $asin; 
+                    $products->product_amz_url = urldecode($urlLink);
+                    $products->product_name = $itemNameDecode;// name 
+                    if(!$products_table->save($products)){
+                        print_r("cannot save the link to databse"); 
+                    }
+                }
+            });
+        }
+
+        die("done!!!");
 
         try {
             $this->render();
@@ -76,5 +110,19 @@ class CrawlersController extends AppController
             }
             throw new NotFoundException();
         }
+    }
+
+    public function readJanCode(){
+        $jansArray = array(); 
+        $jansfile = fopen("jans.txt", "r");
+        if ($jansfile) {
+            while (($line = fgets($jansfile)) !== false) {
+                $jansArray[]=$line;  
+            }
+            fclose($jansfile);
+        } else {
+            die("The file is not exist or no permission "); 
+        }
+        return $jansArray;  
     }
 }
