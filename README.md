@@ -5,9 +5,14 @@ It is simple application for crawler products from amz with jan number
 
 1. Clone app 
 ```
-git colone https://github.com/thanhtungka91/smartshopping.git
+git clone https://github.com/thanhtungka91/smartshopping.git
 ```
-2. Run app 
+2. Run app (if you have composer, please install  php, composer before)
+```
+brew search intl
+brew install homebrew/php/php71-intl
+```
+Then install cakephp and libraies 
 ```
 composer install 
 ```
