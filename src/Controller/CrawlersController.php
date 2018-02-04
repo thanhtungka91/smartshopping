@@ -1,17 +1,5 @@
 <?php
-/**
- * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @copyright Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link      https://cakephp.org CakePHP(tm) Project
- * @since     0.2.9
- * @license   https://opensource.org/licenses/mit-license.php MIT License
- */
+
 namespace App\Controller;
 
 use Cake\Core\Configure;
@@ -25,28 +13,11 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\RequestOptions; 
 use Symfony\Component\BrowserKit\Cookie;
 
-/**
- * Static content controller
- *
- * This controller will render views from Template/Pages/
- *
- * @link https://book.cakephp.org/3.0/en/controllers/pages-controller.html
- */
 class CrawlersController extends AppController
 {
 
-    /**
-     * Displays a view
-     *
-     * @param array ...$path Path segments.
-     * @return \Cake\Http\Response|null
-     * @throws \Cake\Network\Exception\ForbiddenException When a directory traversal attempt.
-     * @throws \Cake\Network\Exception\NotFoundException When the view file could not
-     *   be found or \Cake\View\Exception\MissingTemplateException in debug mode.
-     */
-
-
     public function index(){
+       
         $this->client = new Client();
         $cookieJar = new \GuzzleHttp\Cookie\CookieJar(true);
         $cookieJar->setCookie(new \GuzzleHttp\Cookie\SetCookie([
@@ -72,32 +43,45 @@ class CrawlersController extends AppController
 
         foreach($jansArray as $jan){
             $this->jancode = $jan;
-            $crawler = $this->client->submit($form, array('field-keywords' => $jan));
-            $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
-                $crawler = $this->client->click($node->link());
-                $checkMerchanInfo = $crawler->filter('#merchant-info')->text();
-                if(strpos($checkMerchanInfo,"発送します。")){
-                    // extract data and save to db 
-                    $urlLink = $this->client->getHistory()->current()->getUri(); 
-                    $firstNaemPosition = strpos($urlLink, 'jp');  
-                    $lastNamePosition = strpos($urlLink,'/dp');   
-                    $itemNameEncode = substr($urlLink , $firstNaemPosition+3, $lastNamePosition-$firstNaemPosition-3);
-                    $itemNameDecode = urldecode($itemNameEncode);
-                
-                    $asin = substr($urlLink , $lastNamePosition+4,10);
+            $this->products_table = TableRegistry::get('products');
 
-                    //insert to db 
-                    $products_table = TableRegistry::get('products');
-                    $products = $products_table->newEntity();
-                    $products->product_jan = $this->jancode; 
-                    $products->product_asin = $asin; 
-                    $products->product_amz_url = urldecode($urlLink);
-                    $products->product_name = $itemNameDecode;// name 
-                    if(!$products_table->save($products)){
-                        print_r("cannot save the link to databse"); 
+            $query = $this->products_table->find('all')
+                    ->where(['Products.product_jan =' => $jan])
+                    ->limit(10);
+            $row = $query->first();
+
+            // check if jan has been crawled, skip it 
+
+            if(!$row){
+                $crawler = $this->client->submit($form, array('field-keywords' => $jan));
+                $crawler->filter('.a-link-normal.s-access-detail-page.s-color-twister-title-link.a-text-normal')->each(function ($node) {
+                    $crawler = $this->client->click($node->link());
+                    $checkMerchanInfo = $crawler->filter('#merchant-info')->text();
+                    if(strpos($checkMerchanInfo,"Amazon.co.jp が販売、発送します。")){
+                        // extract data from crawler 
+                        $urlLink = $this->client->getHistory()->current()->getUri(); 
+                        $firstNaemPosition = strpos($urlLink, 'jp');  
+                        $lastNamePosition = strpos($urlLink,'/dp');   
+                        $itemNameEncode = substr($urlLink , $firstNaemPosition+3, $lastNamePosition-$firstNaemPosition-3);
+                        $itemNameDecode = urldecode($itemNameEncode);
+                    
+                        $asin = substr($urlLink , $lastNamePosition+4,10);
+
+                        //insert to db 
+                        $products = $this->products_table->newEntity();
+                        $products->product_jan = $this->jancode; 
+                        $products->product_asin = $asin; 
+                        $products->product_amz_url = urldecode($urlLink);
+                        $products->product_name = $itemNameDecode;// name 
+                        if(!$this->products_table->save($products)){
+                            $this->logging("cannot save the link to database");
+                        }
+                        $this->logging("$this->jancode  was inserted to tabase");
                     }
-                }
-            });
+                });
+            }else{
+                $this->logging("$jan has been crawled");
+            }
         }
 
         die("done!!!");
@@ -121,8 +105,26 @@ class CrawlersController extends AppController
             }
             fclose($jansfile);
         } else {
+            $this->logging("cannot read the file, please check the permision or file");
             die("The file is not exist or no permission "); 
         }
         return $jansArray;  
     }
+
+    public function logging($msg){
+        $fileName = "crawl.txt";
+        $fp = fopen($fileName, "a");
+        if ( !$fp ) {
+            die("please check file permission");
+        }
+        $str_log = stream_get_contents($fp);
+        $str = "[" . date("Y/m/d h:i:s", time()) . "] " . $msg;
+        // write string
+        $fwrite = fwrite($fp, "\n".$str);
+        if ($fwrite === false) {
+             die("cannot write a logs");
+         }
+        fclose($fp);
+    }
+
 }
