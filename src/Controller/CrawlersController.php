@@ -77,6 +77,8 @@ class CrawlersController extends AppController
                             $this->logging("cannot save the link to database");
                         }
                         $this->logging("$this->jancode  was inserted to tabase");
+                    }else{
+                        $this->logging("$this->jancode is not amz selling or shipping");
                     }
                 });
             }else{
