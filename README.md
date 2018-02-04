@@ -7,7 +7,11 @@ It is simple application for crawler products from amz with jan number
 ```
 git clone https://github.com/thanhtungka91/smartshopping.git
 ```
-2. Run app (if you have composer, please install  php, composer before)
+2. Run app (if you dont have composer, please install  php, composer before)
+```
+https://getcomposer.org/doc/00-intro.md
+```
+Then install php extension 
 ```
 brew search intl
 brew install homebrew/php/php71-intl
@@ -41,7 +45,7 @@ b. Create products table
 ```
 CREATE TABLE `smartshopping`.`products` (
   `product_id` INT NOT NULL AUTO_INCREMENT,
-  `product_name` VARCHAR(45) NULL,
+  `product_name` VARCHAR(255) NULL,
   `product_jan` VARCHAR(45) NULL,
   `product_asin` VARCHAR(45) NULL,
   `product_amz_url` VARCHAR(255) NULL,
